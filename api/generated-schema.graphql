@@ -2008,6 +2008,79 @@ type Info implements Node {
   versions: InfoVersions!
 }
 
+type IPv4Address {
+  address: String!
+  netmask: String!
+}
+
+type IPv6Address {
+  address: String!
+  prefixLength: Float!
+}
+
+"""Network interface details"""
+type NetworkInterface {
+  id: PrefixedID!
+
+  """Interface name"""
+  name: String!
+
+  """MAC Address"""
+  macAddress: String!
+  mtu: Int
+  speed: Float
+  duplex: String!
+  internal: Boolean!
+  ipv4Addresses: [IPv4Address!]!
+  ipv6Addresses: [IPv6Address!]!
+  vlanId: Int
+  operstate: String!
+  type: String!
+  virtual: Boolean!
+}
+
+"""Network interface metrics"""
+type NetworkMetric {
+  """Interface name"""
+  name: String!
+
+  """Bytes received"""
+  bytesReceived: Float!
+
+  """Bytes sent"""
+  bytesSent: Float!
+
+  """Packets received"""
+  packetsReceived: Float!
+
+  """Packets sent"""
+  packetsSent: Float!
+
+  """Receive errors"""
+  receiveErrors: Float!
+
+  """Transmit errors"""
+  transmitErrors: Float!
+
+  """Receive dropped"""
+  receiveDropped: Float!
+
+  """Transmit dropped"""
+  transmitDropped: Float!
+
+  """Bytes received per second"""
+  rxSec: Float!
+
+  """Bytes transmitted per second"""
+  txSec: Float!
+
+  """Utilization percent"""
+  utilizationPercent: Float
+
+  """Last updated timestamp"""
+  lastUpdated: DateTime
+}
+
 type LogFile {
   """Name of the log file"""
   name: String!
@@ -2045,6 +2118,9 @@ type Metrics implements Node {
 
   """Current memory utilization metrics"""
   memory: MemoryUtilization
+
+  """Current network interface metrics"""
+  network: [NetworkMetric!]!
 }
 
 type Owner {
@@ -2613,6 +2689,7 @@ type Query {
   disk(id: PrefixedID!): Disk!
   rclone: RCloneBackupSettings!
   info: Info!
+  networkInterfaces: [NetworkInterface!]!
   logFiles: [LogFile!]!
   logFile(path: String!, lines: Int, startLine: Int): LogFileContent!
   settings: Settings!
@@ -2902,5 +2979,6 @@ type Subscription {
   systemMetricsCpu: CpuUtilization!
   systemMetricsCpuTelemetry: CpuPackages!
   systemMetricsMemory: MemoryUtilization!
+  systemMetricsNetwork: [NetworkMetric!]!
   upsUpdates: UPSDevice!
 }

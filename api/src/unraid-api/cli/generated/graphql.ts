@@ -560,6 +560,17 @@ export type CpuLoad = {
   percentUser: Scalars['Float']['output'];
 };
 
+export type CpuPackages = Node & {
+  __typename?: 'CpuPackages';
+  id: Scalars['PrefixedID']['output'];
+  /** Power draw per package (W) */
+  power: Array<Scalars['Float']['output']>;
+  /** Temperature per package (°C) */
+  temp: Array<Scalars['Float']['output']>;
+  /** Total CPU package power draw (W) */
+  totalPower: Scalars['Float']['output'];
+};
+
 export type CpuUtilization = Node & {
   __typename?: 'CpuUtilization';
   /** CPU load for each core */
@@ -589,6 +600,19 @@ export type Customization = {
   activationCode?: Maybe<ActivationCode>;
   partnerInfo?: Maybe<PublicPartnerInfo>;
   theme: Theme;
+};
+
+/** Customization related mutations */
+export type CustomizationMutations = {
+  __typename?: 'CustomizationMutations';
+  /** Update the UI theme (writes dynamix.cfg) */
+  setTheme: Theme;
+};
+
+
+/** Customization related mutations */
+export type CustomizationMutationsSetThemeArgs = {
+  theme: ThemeName;
 };
 
 export type DeleteApiKeyInput = {
@@ -1004,6 +1028,18 @@ export type FormSchema = {
   values: Scalars['JSON']['output'];
 };
 
+export type IPv4Address = {
+  __typename?: 'IPv4Address';
+  address: Scalars['String']['output'];
+  netmask: Scalars['String']['output'];
+};
+
+export type IPv6Address = {
+  __typename?: 'IPv6Address';
+  address: Scalars['String']['output'];
+  prefixLength: Scalars['Float']['output'];
+};
+
 export type Info = Node & {
   __typename?: 'Info';
   /** Motherboard information */
@@ -1065,6 +1101,7 @@ export type InfoCpu = Node & {
   manufacturer?: Maybe<Scalars['String']['output']>;
   /** CPU model */
   model?: Maybe<Scalars['String']['output']>;
+  packages: CpuPackages;
   /** Number of physical processors */
   processors?: Maybe<Scalars['Int']['output']>;
   /** CPU revision */
@@ -1081,6 +1118,8 @@ export type InfoCpu = Node & {
   stepping?: Maybe<Scalars['Int']['output']>;
   /** Number of CPU threads */
   threads?: Maybe<Scalars['Int']['output']>;
+  /** Per-package array of core/thread pairs, e.g. [[[0,1],[2,3]], [[4,5],[6,7]]] */
+  topology: Array<Array<Array<Scalars['Int']['output']>>>;
   /** CPU vendor */
   vendor?: Maybe<Scalars['String']['output']>;
   /** CPU voltage */
@@ -1387,6 +1426,8 @@ export type Metrics = Node & {
   id: Scalars['PrefixedID']['output'];
   /** Current memory utilization metrics */
   memory?: Maybe<MemoryUtilization>;
+  /** Current network interface metrics */
+  network: Array<NetworkMetric>;
 };
 
 /** The status of the minigraph */
@@ -1422,6 +1463,7 @@ export type Mutation = {
   createDockerFolderWithItems: ResolvedOrganizerV1;
   /** Creates a new notification record */
   createNotification: Notification;
+  customization: CustomizationMutations;
   /** Deletes all archived notifications on server. */
   deleteArchivedNotifications: NotificationOverview;
   deleteDockerEntries: ResolvedOrganizerV1;
@@ -1603,6 +1645,57 @@ export type Network = Node & {
   __typename?: 'Network';
   accessUrls?: Maybe<Array<AccessUrl>>;
   id: Scalars['PrefixedID']['output'];
+};
+
+/** Network interface details */
+export type NetworkInterface = {
+  __typename?: 'NetworkInterface';
+  duplex: Scalars['String']['output'];
+  id: Scalars['PrefixedID']['output'];
+  internal: Scalars['Boolean']['output'];
+  ipv4Addresses: Array<IPv4Address>;
+  ipv6Addresses: Array<IPv6Address>;
+  /** MAC Address */
+  macAddress: Scalars['String']['output'];
+  mtu?: Maybe<Scalars['Int']['output']>;
+  /** Interface name */
+  name: Scalars['String']['output'];
+  operstate: Scalars['String']['output'];
+  speed?: Maybe<Scalars['Float']['output']>;
+  type: Scalars['String']['output'];
+  virtual: Scalars['Boolean']['output'];
+  vlanId?: Maybe<Scalars['Int']['output']>;
+};
+
+/** Network interface metrics */
+export type NetworkMetric = {
+  __typename?: 'NetworkMetric';
+  /** Bytes received */
+  bytesReceived: Scalars['Float']['output'];
+  /** Bytes sent */
+  bytesSent: Scalars['Float']['output'];
+  /** Last updated timestamp */
+  lastUpdated?: Maybe<Scalars['DateTime']['output']>;
+  /** Interface name */
+  name: Scalars['String']['output'];
+  /** Packets received */
+  packetsReceived: Scalars['Float']['output'];
+  /** Packets sent */
+  packetsSent: Scalars['Float']['output'];
+  /** Receive dropped */
+  receiveDropped: Scalars['Float']['output'];
+  /** Receive errors */
+  receiveErrors: Scalars['Float']['output'];
+  /** Bytes received per second */
+  rxSec: Scalars['Float']['output'];
+  /** Transmit dropped */
+  transmitDropped: Scalars['Float']['output'];
+  /** Transmit errors */
+  transmitErrors: Scalars['Float']['output'];
+  /** Bytes transmitted per second */
+  txSec: Scalars['Float']['output'];
+  /** Utilization percent */
+  utilizationPercent?: Maybe<Scalars['Float']['output']>;
 };
 
 export type Node = {
@@ -1901,6 +1994,7 @@ export type Query = {
   me: UserAccount;
   metrics: Metrics;
   network: Network;
+  networkInterfaces: Array<NetworkInterface>;
   /** Get all notifications */
   notifications: Notifications;
   /** Get the full OIDC configuration (admin only) */
@@ -2269,7 +2363,9 @@ export type Subscription = {
   parityHistorySubscription: ParityCheck;
   serversSubscription: Server;
   systemMetricsCpu: CpuUtilization;
+  systemMetricsCpuTelemetry: CpuPackages;
   systemMetricsMemory: MemoryUtilization;
+  systemMetricsNetwork: Array<NetworkMetric>;
   upsUpdates: UpsDevice;
 };
 
