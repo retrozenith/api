@@ -1,8 +1,9 @@
-import { Logger, OnModuleInit } from '@nestjs/common';
-import { Query, ResolveField, Resolver, Subscription } from '@nestjs/graphql';
+import { Inject, Logger, OnModuleInit } from '@nestjs/common';
+import { Args, Parent, Query, ResolveField, Resolver, Subscription } from '@nestjs/graphql';
 
 import { AuthAction, Resource } from '@unraid/shared/graphql.model.js';
 import { UsePermissions } from '@unraid/shared/use-permissions.directive.js';
+import { PubSub } from 'graphql-subscriptions';
 
 import { pubsub, PUBSUB_CHANNEL } from '@app/core/pubsub.js';
 import { CpuTopologyService } from '@app/unraid-api/graph/resolvers/info/cpu/cpu-topology.service.js';
@@ -10,6 +11,8 @@ import { CpuPackages, CpuUtilization } from '@app/unraid-api/graph/resolvers/inf
 import { CpuService } from '@app/unraid-api/graph/resolvers/info/cpu/cpu.service.js';
 import { MemoryUtilization } from '@app/unraid-api/graph/resolvers/info/memory/memory.model.js';
 import { MemoryService } from '@app/unraid-api/graph/resolvers/info/memory/memory.service.js';
+import { NetworkMetric } from '@app/unraid-api/graph/resolvers/info/network/network.model.js';
+import { NetworkService } from '@app/unraid-api/graph/resolvers/info/network/network.service.js';
 import { Metrics } from '@app/unraid-api/graph/resolvers/metrics/metrics.model.js';
 import { SubscriptionHelperService } from '@app/unraid-api/graph/services/subscription-helper.service.js';
 import { SubscriptionTrackerService } from '@app/unraid-api/graph/services/subscription-tracker.service.js';
@@ -21,6 +24,7 @@ export class MetricsResolver implements OnModuleInit {
         private readonly cpuService: CpuService,
         private readonly cpuTopologyService: CpuTopologyService,
         private readonly memoryService: MemoryService,
+        private readonly networkService: NetworkService,
         private readonly subscriptionTracker: SubscriptionTrackerService,
         private readonly subscriptionHelper: SubscriptionHelperService
     ) {}
@@ -77,6 +81,16 @@ export class MetricsResolver implements OnModuleInit {
             },
             2000
         );
+
+        // Register network polling with 2 second interval
+        this.subscriptionTracker.registerTopic(
+            PUBSUB_CHANNEL.NETWORK_UTILIZATION,
+            async () => {
+                const payload = await this.networkService.generateNetworkMetricsWithUtilization();
+                pubsub.publish(PUBSUB_CHANNEL.NETWORK_UTILIZATION, { systemMetricsNetwork: payload });
+            },
+            2000
+        );
     }
 
     @Query(() => Metrics)
@@ -88,6 +102,11 @@ export class MetricsResolver implements OnModuleInit {
         return {
             id: 'metrics',
         };
+    }
+
+    @ResolveField(() => [NetworkMetric])
+    public async network(): Promise<NetworkMetric[]> {
+        return this.networkService.generateNetworkMetricsWithUtilization();
     }
 
     @ResolveField(() => CpuUtilization, { nullable: true })
@@ -134,5 +153,17 @@ export class MetricsResolver implements OnModuleInit {
     })
     public async systemMetricsMemorySubscription() {
         return this.subscriptionHelper.createTrackedSubscription(PUBSUB_CHANNEL.MEMORY_UTILIZATION);
+    }
+
+    @Subscription(() => [NetworkMetric], {
+        name: 'systemMetricsNetwork',
+        resolve: (value) => value.systemMetricsNetwork,
+    })
+    @UsePermissions({
+        action: AuthAction.READ_ANY,
+        resource: Resource.INFO,
+    })
+    public async systemMetricsNetworkSubscription() {
+        return this.subscriptionHelper.createTrackedSubscription(PUBSUB_CHANNEL.NETWORK_UTILIZATION);
     }
 }

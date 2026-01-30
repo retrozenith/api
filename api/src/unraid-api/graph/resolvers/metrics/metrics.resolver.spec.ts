@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CpuTopologyService } from '@app/unraid-api/graph/resolvers/info/cpu/cpu-topology.service.js';
 import { CpuService } from '@app/unraid-api/graph/resolvers/info/cpu/cpu.service.js';
 import { MemoryService } from '@app/unraid-api/graph/resolvers/info/memory/memory.service.js';
+import { NetworkService } from '@app/unraid-api/graph/resolvers/info/network/network.service.js';
 import { MetricsResolver } from '@app/unraid-api/graph/resolvers/metrics/metrics.resolver.js';
 import { SubscriptionHelperService } from '@app/unraid-api/graph/services/subscription-helper.service.js';
 import { SubscriptionTrackerService } from '@app/unraid-api/graph/services/subscription-tracker.service.js';
@@ -14,6 +15,7 @@ describe('MetricsResolver', () => {
     let resolver: MetricsResolver;
     let cpuService: CpuService;
     let memoryService: MemoryService;
+    let networkService: NetworkService;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -71,6 +73,12 @@ describe('MetricsResolver', () => {
                     },
                 },
                 {
+                    provide: NetworkService,
+                    useValue: {
+                        generateNetworkMetricsWithUtilization: vi.fn().mockResolvedValue([]),
+                    },
+                },
+                {
                     provide: SubscriptionTrackerService,
                     useValue: {
                         registerTopic: vi.fn(),
@@ -88,6 +96,7 @@ describe('MetricsResolver', () => {
         resolver = module.get<MetricsResolver>(MetricsResolver);
         cpuService = module.get<CpuService>(CpuService);
         memoryService = module.get<MemoryService>(MemoryService);
+        networkService = module.get<NetworkService>(NetworkService);
     });
 
     describe('metrics', () => {
@@ -158,7 +167,7 @@ describe('MetricsResolver', () => {
     });
 
     describe('onModuleInit', () => {
-        it('should register CPU and memory polling topics', () => {
+        it('should register CPU, memory and network polling topics', () => {
             const subscriptionTracker = {
                 registerTopic: vi.fn(),
             };
@@ -172,13 +181,14 @@ describe('MetricsResolver', () => {
                 cpuService,
                 cpuTopologyServiceMock as unknown as CpuTopologyService,
                 memoryService,
+                networkService,
                 subscriptionTracker as any,
                 {} as any
             );
 
             testModule.onModuleInit();
 
-            expect(subscriptionTracker.registerTopic).toHaveBeenCalledTimes(3);
+            expect(subscriptionTracker.registerTopic).toHaveBeenCalledTimes(4);
             expect(subscriptionTracker.registerTopic).toHaveBeenCalledWith(
                 'CPU_UTILIZATION',
                 expect.any(Function),
@@ -186,6 +196,11 @@ describe('MetricsResolver', () => {
             );
             expect(subscriptionTracker.registerTopic).toHaveBeenCalledWith(
                 'MEMORY_UTILIZATION',
+                expect.any(Function),
+                2000
+            );
+            expect(subscriptionTracker.registerTopic).toHaveBeenCalledWith(
+                'NETWORK_UTILIZATION',
                 expect.any(Function),
                 2000
             );
